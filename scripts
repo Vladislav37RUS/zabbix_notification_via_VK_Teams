@@ -1,0 +1,54 @@
+var VKTeams = {
+    token: null,
+    to: null,
+    message: null,
+
+    sendMessage: function() {
+        var  response,
+        request = new HttpRequest(),
+        url = 'https://myteam.mail.ru/bot/v1/messages/sendText?token=' + VKTeams.token + '&chatId=' + VKTeams.to + '&text=' + VKTeams.message;
+
+        request.addHeader('Content-Type: application/json');
+
+        // Remove replace() function if you want to see the exposed token in the log file.
+        Zabbix.log(4, '[VKTeams Webhook] URL: ' + url.replace(VKTeams.token, '<TOKEN>'));
+        Zabbix.log(4, '[VKTeams Webhook] chat(message): ' + VKTeams.to + '('+ VKTeams.message +')');
+        response = request.post(encodeURI(url));
+        Zabbix.log(4, '[VKTeams Webhook] HTTP code: ' + request.getStatus());
+
+        try {
+            response = JSON.parse(response);
+        }
+        catch (error) {
+            response = null;
+        }
+
+        if (request.getStatus() !== 200 || typeof response.ok !== 'boolean' || response.ok !== true) {
+            if (typeof response.description === 'string') {
+                throw response.description;
+            }
+            else {
+                throw 'Unknown error. Check debug log for more information.'
+            }
+        }
+    }
+}
+
+try {
+    var params = JSON.parse(value);
+    
+    if (typeof params.Token === 'undefined') {
+        throw 'Incorrect value is given for parameter "Token": parameter is missing';
+    }
+    
+    VKTeams.token = params.Token;
+    VKTeams.to = params.To;
+    VKTeams.message = params.Subject + '\n' + params.Message;
+    VKTeams.sendMessage();
+
+    return 'OK';
+}
+catch (error) {
+    Zabbix.log(4, '[VKTeams Webhook] notification failed: ' + error);
+    throw 'Sending failed: ' + error + '.';
+}
